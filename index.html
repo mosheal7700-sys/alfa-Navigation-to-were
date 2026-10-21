@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ניווט ומסלולים">
 
-  <!-- קישור לקובץ המניפסט והאייקון החיצוני -->
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="icon" type="image/png" href="icon.png">
@@ -28,9 +27,8 @@
         <i class="fa-solid fa-route"></i>
         מתכנן ומשתף מסלולים
       </h1>
-      <p class="text-slate-400 text-sm">הזן יעד (ומוצא אופציונלי), שמור ברשימה ושתף בקלות</p>
+      <p class="text-slate-400 text-sm">הזן יעד, בחר אפליקציית ניווט, שמור ברשימה ושתף בקלות</p>
       
-      <!-- כפתור התקנה (מוצג אוטומטית כשהדפדפן מאפשר) -->
       <div id="installContainer" class="hidden pt-1">
         <button id="installBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2 mx-auto">
           <i class="fa-solid fa-download"></i>
@@ -65,12 +63,26 @@
       </div>
 
       <!-- אמצעי תחבורה -->
-      <div>
-        <label class="block text-sm font-medium mb-2 text-slate-300">אמצעי תחבורה</label>
+      <div class="space-y-3">
+        <label class="block text-sm font-medium text-slate-300">אמצעי תחבורה</label>
+        
+        <!-- בחירת אפליקציית ניווט לרכב (מוצג רק כשבוחרים רכב) -->
+        <div id="drivingOptions" class="flex items-center gap-4 bg-slate-700/40 p-3 rounded-xl border border-slate-700">
+          <span class="text-xs text-slate-300 font-medium">ניווט רכב באמצעות:</span>
+          <label class="flex items-center gap-1.5 text-xs text-white cursor-pointer">
+            <input type="radio" name="driveApp" value="waze" checked onchange="updateDriveMode()" class="accent-emerald-500">
+            Waze
+          </label>
+          <label class="flex items-center gap-1.5 text-xs text-white cursor-pointer">
+            <input type="radio" name="driveApp" value="google" onchange="updateDriveMode()" class="accent-emerald-500">
+            גוגל מפות
+          </label>
+        </div>
+
         <div class="grid grid-cols-4 gap-2">
           <button type="button" onclick="setMode('driving')" id="btn-driving" class="mode-btn bg-emerald-600 text-white p-3 rounded-xl border border-emerald-500 flex flex-col items-center justify-center gap-1">
             <i class="fa-solid fa-car text-lg"></i>
-            <span class="text-xs">רכב (Waze)</span>
+            <span class="text-xs" id="drivingLabel">רכב (Waze)</span>
           </button>
           <button type="button" onclick="setMode('transit')" id="btn-transit" class="mode-btn bg-slate-700 text-slate-300 p-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center gap-1">
             <i class="fa-solid fa-bus text-lg"></i>
@@ -120,6 +132,7 @@
 
   <script>
     let selectedMode = 'driving';
+    let driveApp = 'waze';
     let deferredPrompt;
 
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -152,30 +165,55 @@
       });
       const activeBtn = document.getElementById(`btn-${mode}`);
       activeBtn.className = 'mode-btn bg-emerald-600 text-white p-3 rounded-xl border border-emerald-500 flex flex-col items-center justify-center gap-1';
+
+      // הצגה או הסתרה של תת-הגדרות רכב
+      const driveOptionsEl = document.getElementById('drivingOptions');
+      if (mode === 'driving') {
+        driveOptionsEl.classList.remove('hidden');
+      } else {
+        driveOptionsEl.classList.add('hidden');
+      }
     }
 
-    function generateMapUrl(origin, destination, mode) {
-      const encodedDest = encodeURIComponent(destination);
-      const encodedOrigin = origin ? encodeURIComponent(origin) : '';
-
-      if (mode === 'driving') {
-        if (encodedOrigin) {
-          return `https://waze.com/ul?from=${encodedOrigin}&q=${encodedDest}&navigate=yes`;
+    function updateDriveMode() {
+      const selectedRadio = document.querySelector('input[name="driveApp"]:checked');
+      if (selectedRadio) {
+        driveApp = selectedRadio.value;
+        const label = document.getElementById('drivingLabel');
+        if (driveApp === 'waze') {
+          label.innerText = 'רכב (Waze)';
         } else {
-          return `https://waze.com/ul?q=${encodedDest}&navigate=yes`;
-        }
-      } else {
-        if (encodedOrigin) {
-          return `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDest}&travelmode=${mode}`;
-        } else {
-          return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=${mode}`;
+          label.innerText = 'רכב (גוגל)';
         }
       }
     }
 
-    function getModeHebrew(mode) {
+    function generateMapUrl(origin, destination, mode, subApp = 'waze') {
+      const encodedDest = encodeURIComponent(destination);
+      const encodedOrigin = origin ? encodeURIComponent(origin) : '';
+
+      if (mode === 'driving') {
+        if (subApp === 'waze') {
+          return encodedOrigin 
+            ? `https://waze.com/ul?from=${encodedOrigin}&q=${encodedDest}&navigate=yes`
+            : `https://waze.com/ul?q=${encodedDest}&navigate=yes`;
+        } else {
+          return encodedOrigin 
+            ? `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDest}&travelmode=driving`
+            : `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=driving`;
+        }
+      } else {
+        return encodedOrigin 
+          ? `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDest}&travelmode=${mode}`
+          : `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=${mode}`;
+      }
+    }
+
+    function getModeHebrew(mode, subApp) {
+      if (mode === 'driving') {
+        return subApp === 'waze' ? 'רכב פרטי (Waze) 🚗' : 'רכב פרטי (גוגל מפות) 🚗';
+      }
       const modes = {
-        driving: 'רכב פרטי (Waze) 🚗',
         transit: 'תחבורה ציבורית 🚌',
         walking: 'הליכה 🚶',
         bicycling: 'אופניים 🚲'
@@ -193,13 +231,15 @@
       }
 
       const displayOrigin = origin ? origin : 'מיקום נוכחי 📍';
-      const mapUrl = generateMapUrl(origin, destination, selectedMode);
+      const currentSubApp = selectedMode === 'driving' ? driveApp : '';
+      const mapUrl = generateMapUrl(origin, destination, selectedMode, currentSubApp);
 
       const routeObj = {
         id: Date.now(),
         origin: displayOrigin,
         destination,
         mode: selectedMode,
+        subApp: currentSubApp,
         mapUrl
       };
 
@@ -228,7 +268,7 @@
               <span>${item.destination}</span>
             </div>
             <div class="text-xs text-slate-300 flex flex-wrap gap-x-3 gap-y-1">
-              <span>• ${getModeHebrew(item.mode)}</span>
+              <span>• ${getModeHebrew(item.mode, item.subApp)}</span>
             </div>
           </div>
           <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-600/50 pt-2 sm:pt-0 flex-wrap">
@@ -260,7 +300,7 @@
       const shareText = `📍 מסלול מתוכנן:
 🔹 מוצא: ${item.origin}
 🔹 יעד: ${item.destination}
-🚗 אמצעי תחבורה: ${getModeHebrew(item.mode)}
+🚗 אמצעי תחבורה: ${getModeHebrew(item.mode, item.subApp)}
 
 🔗 קישור לניווט:
 ${item.mapUrl}`;
@@ -277,7 +317,7 @@ ${item.mapUrl}`;
       const shareText = `📍 מסלול מתוכנן:
 🔹 מוצא: ${item.origin}
 🔹 יעד: ${item.destination}
-🚗 אמצעי תחבורה: ${getModeHebrew(item.mode)}
+🚗 אמצעי תחבורה: ${getModeHebrew(item.mode, item.subApp)}
 
 🔗 קישור לניווט:
 ${item.mapUrl}`;
@@ -311,7 +351,7 @@ ${item.mapUrl}`;
         alert('נא להזין יעד');
         return;
       }
-      window.open(generateMapUrl(origin, destination, selectedMode), '_blank');
+      window.open(generateMapUrl(origin, destination, selectedMode, driveApp), '_blank');
     }
 
     function deleteRoute(id) {
