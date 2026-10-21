@@ -11,12 +11,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ניווט ומסלולים">
 
-  <!-- אייקון האפליקציה (SVG Data URI) -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230f172a'/><path d='M30 75 Q50 25 70 75' stroke='%2310b981' stroke-width='8' fill='none' stroke-linecap='round'/><circle cx='70' cy='35' r='14' fill='%23ef4444'/><circle cx='70' cy='35' r='6' fill='%23ffffff'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230f172a'/><path d='M30 75 Q50 25 70 75' stroke='%2310b981' stroke-width='8' fill='none' stroke-linecap='round'/><circle cx='70' cy='35' r='14' fill='%23ef4444'/><circle cx='70' cy='35' r='6' fill='%23ffffff'/></svg>">
-
-  <!-- Manifest מובנה -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"מתכנן ומשתף מסלולים","short_name":"מסלולים","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230f172a%22/><path d=%22M30 75 Q50 25 70 75%22 stroke=%22%2310b981%22 stroke-width=%228%22 fill=%22none%22 stroke-linecap=%22round%22/><circle cx=%2270%22 cy=%2235%22 r=%2214%22 fill=%22%23ef4444%22/><circle cx=%2270%22 cy=%2235%22 r=%226%22 fill=%22%23ffffff%22/></svg>","sizes":"512x512","type":"image/svg+xml"}]}'>
+  <!-- קישור לקובץ המניפסט והאייקון החיצוני -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -32,7 +30,7 @@
       </h1>
       <p class="text-slate-400 text-sm">הזן יעד (ומוצא אופציונלי), שמור ברשימה ושתף בקלות</p>
       
-      <!-- כפתור התקנה (מוצג באופן אוטומטי בדפדפנים תומכים) -->
+      <!-- כפתור התקנה (מוצג אוטומטית כשהדפדפן מאפשר) -->
       <div id="installContainer" class="hidden pt-1">
         <button id="installBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2 mx-auto">
           <i class="fa-solid fa-download"></i>
@@ -124,7 +122,6 @@
     let selectedMode = 'driving';
     let deferredPrompt;
 
-    // מנגנון התקנה במסך הבית (PWA)
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
