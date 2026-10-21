@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מתכנן ומשתף מסלולים</title>
+  
+  <!-- הגדרות להתקנה במסך הבית (PWA) -->
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ניווט ומסלולים">
+
+  <!-- אייקון האפליקציה (SVG Data URI) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230f172a'/><path d='M30 75 Q50 25 70 75' stroke='%2310b981' stroke-width='8' fill='none' stroke-linecap='round'/><circle cx='70' cy='35' r='14' fill='%23ef4444'/><circle cx='70' cy='35' r='6' fill='%23ffffff'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230f172a'/><path d='M30 75 Q50 25 70 75' stroke='%2310b981' stroke-width='8' fill='none' stroke-linecap='round'/><circle cx='70' cy='35' r='14' fill='%23ef4444'/><circle cx='70' cy='35' r='6' fill='%23ffffff'/></svg>">
+
+  <!-- Manifest מובנה -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"מתכנן ומשתף מסלולים","short_name":"מסלולים","start_url":".","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230f172a%22/><path d=%22M30 75 Q50 25 70 75%22 stroke=%22%2310b981%22 stroke-width=%228%22 fill=%22none%22 stroke-linecap=%22round%22/><circle cx=%2270%22 cy=%2235%22 r=%2214%22 fill=%22%23ef4444%22/><circle cx=%2270%22 cy=%2235%22 r=%226%22 fill=%22%23ffffff%22/></svg>","sizes":"512x512","type":"image/svg+xml"}]}'>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+  <div class="max-w-2xl mx-auto space-y-6">
+    
+    <!-- כותרת וכפתור התקנה -->
+    <header class="text-center space-y-3">
+      <h1 class="text-3xl font-bold text-emerald-400 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-route"></i>
+        מתכנן ומשתף מסלולים
+      </h1>
+      <p class="text-slate-400 text-sm">הזן יעד (ומוצא אופציונלי), שמור ברשימה ושתף בקלות</p>
+      
+      <!-- כפתור התקנה (מוצג באופן אוטומטי בדפדפנים תומכים) -->
+      <div id="installContainer" class="hidden pt-1">
+        <button id="installBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2 mx-auto">
+          <i class="fa-solid fa-download"></i>
+          התקן אפליקציה במסך הבית
+        </button>
+      </div>
+    </header>
+
+    <!-- טופס הזנה -->
+    <div class="bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700 space-y-4">
+      
+      <!-- נקודת מוצא (אופציונלי) -->
+      <div>
+        <label class="block text-sm font-medium mb-1 text-slate-300">נקודת מוצא <span class="text-xs text-slate-400">(אופציונלי - ברירת מחדל: מיקום נוכחי)</span></label>
+        <div class="flex gap-2">
+          <input type="text" id="origin" placeholder="השאר ריק למיקום נוכחי" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
+          <button type="button" onclick="startSpeech('origin')" id="mic-origin" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- יעד (חובה) -->
+      <div>
+        <label class="block text-sm font-medium mb-1 text-slate-300">יעד</label>
+        <div class="flex gap-2">
+          <input type="text" id="destination" placeholder="למשל: חיפה, מרכז הכרמל" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
+          <button type="button" onclick="startSpeech('destination')" id="mic-destination" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
+            <i class="fa-solid fa-microphone"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- אמצעי תחבורה -->
+      <div>
+        <label class="block text-sm font-medium mb-2 text-slate-300">אמצעי תחבורה</label>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" onclick="setMode('driving')" id="btn-driving" class="mode-btn bg-emerald-600 text-white p-3 rounded-xl border border-emerald-500 flex flex-col items-center justify-center gap-1">
+            <i class="fa-solid fa-car text-lg"></i>
+            <span class="text-xs">רכב (Waze)</span>
+          </button>
+          <button type="button" onclick="setMode('transit')" id="btn-transit" class="mode-btn bg-slate-700 text-slate-300 p-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center gap-1">
+            <i class="fa-solid fa-bus text-lg"></i>
+            <span class="text-xs">תחב"צ</span>
+          </button>
+          <button type="button" onclick="setMode('walking')" id="btn-walking" class="mode-btn bg-slate-700 text-slate-300 p-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center gap-1">
+            <i class="fa-solid fa-person-walking text-lg"></i>
+            <span class="text-xs">הליכה</span>
+          </button>
+          <button type="button" onclick="setMode('bicycling')" id="btn-bicycling" class="mode-btn bg-slate-700 text-slate-300 p-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center gap-1">
+            <i class="fa-solid fa-bicycle text-lg"></i>
+            <span class="text-xs">אופניים</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- כפתורי פעולה -->
+      <div class="pt-2 flex flex-col sm:flex-row gap-3">
+        <button onclick="saveRoute()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-bold py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
+          <i class="fa-solid fa-bookmark"></i>
+          שמור מסלול ברשימה
+        </button>
+        <button onclick="openCurrentMap()" class="bg-slate-700 hover:bg-slate-600 text-white font-medium px-5 py-3 rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-map-location-dot"></i>
+          פתח ניווט
+        </button>
+      </div>
+
+    </div>
+
+    <!-- רשימת מסלולים שמורים -->
+    <div class="bg-slate-800 rounded-2xl p-6 shadow-xl border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-emerald-400"></i>
+          מסלולים שמורים
+        </h2>
+        <button onclick="clearAllRoutes()" class="text-xs text-rose-400 hover:underline">מחק הכל</button>
+      </div>
+
+      <div id="routesList" class="space-y-3">
+        <!-- מסלולים שמורים יופיעו כאן -->
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let selectedMode = 'driving';
+    let deferredPrompt;
+
+    // מנגנון התקנה במסך הבית (PWA)
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installContainer = document.getElementById('installContainer');
+      if (installContainer) {
+        installContainer.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('installBtn')?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('installContainer').classList.add('hidden');
+      }
+      deferredPrompt = null;
+    });
+
+    window.onload = function() {
+      renderSavedRoutes();
+    };
+
+    function setMode(mode) {
+      selectedMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.className = 'mode-btn bg-slate-700 text-slate-300 p-3 rounded-xl border border-slate-600 flex flex-col items-center justify-center gap-1';
+      });
+      const activeBtn = document.getElementById(`btn-${mode}`);
+      activeBtn.className = 'mode-btn bg-emerald-600 text-white p-3 rounded-xl border border-emerald-500 flex flex-col items-center justify-center gap-1';
+    }
+
+    function generateMapUrl(origin, destination, mode) {
+      const encodedDest = encodeURIComponent(destination);
+      const encodedOrigin = origin ? encodeURIComponent(origin) : '';
+
+      if (mode === 'driving') {
+        if (encodedOrigin) {
+          return `https://waze.com/ul?from=${encodedOrigin}&q=${encodedDest}&navigate=yes`;
+        } else {
+          return `https://waze.com/ul?q=${encodedDest}&navigate=yes`;
+        }
+      } else {
+        if (encodedOrigin) {
+          return `https://www.google.com/maps/dir/?api=1&origin=${encodedOrigin}&destination=${encodedDest}&travelmode=${mode}`;
+        } else {
+          return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=${mode}`;
+        }
+      }
+    }
+
+    function getModeHebrew(mode) {
+      const modes = {
+        driving: 'רכב פרטי (Waze) 🚗',
+        transit: 'תחבורה ציבורית 🚌',
+        walking: 'הליכה 🚶',
+        bicycling: 'אופניים 🚲'
+      };
+      return modes[mode] || 'רכב פרטי 🚗';
+    }
+
+    function saveRoute() {
+      let origin = document.getElementById('origin').value.trim();
+      const destination = document.getElementById('destination').value.trim();
+
+      if (!destination) {
+        alert('נא להזין יעד לפחות');
+        return;
+      }
+
+      const displayOrigin = origin ? origin : 'מיקום נוכחי 📍';
+      const mapUrl = generateMapUrl(origin, destination, selectedMode);
+
+      const routeObj = {
+        id: Date.now(),
+        origin: displayOrigin,
+        destination,
+        mode: selectedMode,
+        mapUrl
+      };
+
+      const saved = JSON.parse(localStorage.getItem('my_routes') || '[]');
+      saved.unshift(routeObj);
+      localStorage.setItem('my_routes', JSON.stringify(saved));
+
+      renderSavedRoutes();
+    }
+
+    function renderSavedRoutes() {
+      const listContainer = document.getElementById('routesList');
+      const saved = JSON.parse(localStorage.getItem('my_routes') || '[]');
+
+      if (saved.length === 0) {
+        listContainer.innerHTML = '<p class="text-slate-500 text-center py-4 text-sm">אין מסלולים שמורים ברשימה עדיין</p>';
+        return;
+      }
+
+      listContainer.innerHTML = saved.map(item => `
+        <div class="bg-slate-700/60 border border-slate-600/80 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div class="space-y-1">
+            <div class="font-semibold text-white flex items-center gap-2">
+              <span>${item.origin}</span>
+              <i class="fa-solid fa-arrow-left text-xs text-emerald-400"></i>
+              <span>${item.destination}</span>
+            </div>
+            <div class="text-xs text-slate-300 flex flex-wrap gap-x-3 gap-y-1">
+              <span>• ${getModeHebrew(item.mode)}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-slate-600/50 pt-2 sm:pt-0 flex-wrap">
+            <button onclick="shareToWhatsApp(${item.id})" class="bg-green-600 hover:bg-green-500 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow">
+              <i class="fa-brands fa-whatsapp text-sm"></i>
+              ווצאפ
+            </button>
+            <button onclick="shareRouteNative(${item.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow">
+              <i class="fa-solid fa-share-nodes text-sm"></i>
+              שתף
+            </button>
+            <a href="${item.mapUrl}" target="_blank" class="bg-slate-600 hover:bg-slate-500 text-white text-xs px-3 py-2 rounded-lg flex items-center gap-1 transition-all">
+              <i class="fa-solid fa-location-arrow"></i>
+              פתח
+            </a>
+            <button onclick="deleteRoute(${item.id})" class="text-slate-400 hover:text-rose-400 p-2 text-xs">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function shareToWhatsApp(id) {
+      const saved = JSON.parse(localStorage.getItem('my_routes') || '[]');
+      const item = saved.find(r => r.id === id);
+      if (!item) return;
+
+      const shareText = `📍 מסלול מתוכנן:
+🔹 מוצא: ${item.origin}
+🔹 יעד: ${item.destination}
+🚗 אמצעי תחבורה: ${getModeHebrew(item.mode)}
+
+🔗 קישור לניווט:
+${item.mapUrl}`;
+
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+      window.open(waUrl, '_blank');
+    }
+
+    async function shareRouteNative(id) {
+      const saved = JSON.parse(localStorage.getItem('my_routes') || '[]');
+      const item = saved.find(r => r.id === id);
+      if (!item) return;
+
+      const shareText = `📍 מסלול מתוכנן:
+🔹 מוצא: ${item.origin}
+🔹 יעד: ${item.destination}
+🚗 אמצעי תחבורה: ${getModeHebrew(item.mode)}
+
+🔗 קישור לניווט:
+${item.mapUrl}`;
+
+      const shareData = {
+        title: `מסלול ל-${item.destination}`,
+        text: shareText,
+        url: item.mapUrl
+      };
+
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          console.log('שיתוף בוטל', err);
+        }
+      } else {
+        try {
+          await navigator.clipboard.writeText(shareText);
+          alert('תפריט שיתוף אינו נתמך בדפדפן זה. הקישור והפרטים הועתקו ללוח!');
+        } catch (err) {
+          alert('הקישור: ' + item.mapUrl);
+        }
+      }
+    }
+
+    function openCurrentMap() {
+      const origin = document.getElementById('origin').value.trim();
+      const destination = document.getElementById('destination').value.trim();
+      if (!destination) {
+        alert('נא להזין יעד');
+        return;
+      }
+      window.open(generateMapUrl(origin, destination, selectedMode), '_blank');
+    }
+
+    function deleteRoute(id) {
+      let saved = JSON.parse(localStorage.getItem('my_routes') || '[]');
+      saved = saved.filter(r => r.id !== id);
+      localStorage.setItem('my_routes', JSON.stringify(saved));
+      renderSavedRoutes();
+    }
+
+    function clearAllRoutes() {
+      if (confirm('בטוח שברצונך למחוק את כל המסלולים השמורים?')) {
+        localStorage.removeItem('my_routes');
+        renderSavedRoutes();
+      }
+    }
+
+    function startSpeech(fieldId) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert('זיהוי קולי אינו נתמך בדפדפן זה. מומלץ להשתמש בדפדפן Google Chrome.');
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'he-IL';
+      recognition.interimResults = false;
+
+      const inputEl = document.getElementById(fieldId);
+      const micBtn = document.getElementById(`mic-${fieldId}`);
+
+      micBtn.classList.add('text-rose-500', 'animate-pulse');
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        inputEl.value = event.results[0][0].transcript;
+      };
+
+      recognition.onerror = function(event) {
+        if (event.error === 'not-allowed') {
+          alert('הגישה למיקרופון נדחתה. נא לאשר הרשאת מיקרופון בהגדרות בדפדפן.');
+        } else {
+          alert('שגיאה בזיהוי הקולי: ' + event.error);
+        }
+      };
+
+      recognition.onend = function() {
+        micBtn.classList.remove('text-rose-500', 'animate-pulse');
+      };
+    }
+  </script>
+</body>
+</html>
