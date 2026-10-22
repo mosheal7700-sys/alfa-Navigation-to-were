@@ -27,7 +27,7 @@
         <i class="fa-solid fa-route"></i>
         מתכנן ומשתף מסלולים
       </h1>
-      <p class="text-slate-400 text-sm">הזן יעד, בחר אפליקציית ניווט, שמור ברשימה ושתף בקלות</p>
+      <p class="text-slate-400 text-sm">הזן יעד (החזק את המיקרופון להקלטה), שמור ברשימה ושתף בקלות</p>
       
       <div id="installContainer" class="hidden pt-1">
         <button id="installBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2 mx-auto">
@@ -45,7 +45,11 @@
         <label class="block text-sm font-medium mb-1 text-slate-300">נקודת מוצא <span class="text-xs text-slate-400">(אופציונלי - ברירת מחדל: מיקום נוכחי)</span></label>
         <div class="flex gap-2">
           <input type="text" id="origin" placeholder="השאר ריק למיקום נוכחי" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
-          <button type="button" onclick="startSpeech('origin')" id="mic-origin" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
+          <!-- כפתור עם אירועי העמדה/לחיצה להקלטה בלחיצה ממושכת -->
+          <button type="button" 
+                  onmousedown="startSpeech('origin')" onmouseup="stopSpeech()" 
+                  onttouchstart="startSpeech('origin')" ontouchend="stopSpeech()"
+                  id="mic-origin" class="mic-btn bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center select-none cursor-pointer">
             <i class="fa-solid fa-microphone"></i>
           </button>
         </div>
@@ -56,7 +60,10 @@
         <label class="block text-sm font-medium mb-1 text-slate-300">יעד</label>
         <div class="flex gap-2">
           <input type="text" id="destination" placeholder="למשל: חיפה, מרכז הכרמל" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
-          <button type="button" onclick="startSpeech('destination')" id="mic-destination" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
+          <button type="button" 
+                  onmousedown="startSpeech('destination')" onmouseup="stopSpeech()" 
+                  onttouchstart="startSpeech('destination')" ontouchend="stopSpeech()"
+                  id="mic-destination" class="mic-btn bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center select-none cursor-pointer">
             <i class="fa-solid fa-microphone"></i>
           </button>
         </div>
@@ -66,7 +73,6 @@
       <div class="space-y-3">
         <label class="block text-sm font-medium text-slate-300">אמצעי תחבורה</label>
         
-        <!-- בחירת אפליקציית ניווט לרכב (מוצג רק כשבוחרים רכב) -->
         <div id="drivingOptions" class="flex items-center gap-4 bg-slate-700/40 p-3 rounded-xl border border-slate-700">
           <span class="text-xs text-slate-300 font-medium">ניווט רכב באמצעות:</span>
           <label class="flex items-center gap-1.5 text-xs text-white cursor-pointer">
@@ -134,6 +140,9 @@
     let selectedMode = 'driving';
     let driveApp = 'waze';
     let deferredPrompt;
+    let recognition = null;
+    let currentInputEl = null;
+    let currentMicBtn = null;
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -166,7 +175,6 @@
       const activeBtn = document.getElementById(`btn-${mode}`);
       activeBtn.className = 'mode-btn bg-emerald-600 text-white p-3 rounded-xl border border-emerald-500 flex flex-col items-center justify-center gap-1';
 
-      // הצגה או הסתרה של תת-הגדרות רכב
       const driveOptionsEl = document.getElementById('drivingOptions');
       if (mode === 'driving') {
         driveOptionsEl.classList.remove('hidden');
@@ -368,6 +376,7 @@ ${item.mapUrl}`;
       }
     }
 
+    // התחלת הקלטה בלחיצה
     function startSpeech(fieldId) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -376,32 +385,57 @@ ${item.mapUrl}`;
         return;
       }
 
-      const recognition = new SpeechRecognition();
+      // מניעת הפעלה כפולה אם כבר מקליט
+      if (recognition) return;
+
+      currentInputEl = document.getElementById(fieldId);
+      currentMicBtn = document.getElementById(`mic-${fieldId}`);
+
+      recognition = new SpeechRecognition();
       recognition.lang = 'he-IL';
-      recognition.interimResults = false;
+      recognition.interimResults = true; // מציג תוצאה תוך כדי דיבור
 
-      const inputEl = document.getElementById(fieldId);
-      const micBtn = document.getElementById(`mic-${fieldId}`);
-
-      micBtn.classList.add('text-rose-500', 'animate-pulse');
-
-      recognition.start();
+      currentMicBtn.classList.add('text-rose-500', 'animate-pulse');
 
       recognition.onresult = function(event) {
-        inputEl.value = event.results[0][0].transcript;
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        currentInputEl.value = transcript;
       };
 
       recognition.onerror = function(event) {
-        if (event.error === 'not-allowed') {
-          alert('הגישה למיקרופון נדחתה. נא לאשר הרשאת מיקרופון בהגדרות בדפדפן.');
-        } else {
-          alert('שגיאה בזיהוי הקולי: ' + event.error);
-        }
+        console.log('שגיאת זיהוי קולי:', event.error);
       };
 
       recognition.onend = function() {
-        micBtn.classList.remove('text-rose-500', 'animate-pulse');
+        if (currentMicBtn) {
+          currentMicBtn.classList.remove('text-rose-500', 'animate-pulse');
+        }
+        recognition = null;
       };
+
+      try {
+        recognition.start();
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    // עצירת הקלטה בעזיבת הלחיצה
+    function stopSpeech() {
+      if (recognition) {
+        // השהייה קצרה של חצי שנייה (500 מילישניות) לפני סגירה מוחלטת כפי שביקשת
+        setTimeout(() => {
+          if (recognition) {
+            recognition.stop();
+          }
+          if (currentMicBtn) {
+            currentMicBtn.classList.remove('text-rose-500', 'animate-pulse');
+          }
+        }, 500);
+      }
     }
   </script>
 </body>
