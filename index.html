@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>מתכנן ומשתף מסלולים</title>
   
-  <!-- הגדרות להתקנה במסך הבית (PWA) -->
   <meta name="theme-color" content="#0f172a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +26,7 @@
         <i class="fa-solid fa-route"></i>
         מתכנן ומשתף מסלולים
       </h1>
-      <p class="text-slate-400 text-sm">הזן יעד (החזק את המיקרופון להקלטה), שמור ברשימה ושתף בקלות</p>
+      <p class="text-slate-400 text-sm">הזן יעד (לחץ על המיקרופון להקלטה), שמור ברשימה ושתף בקלות</p>
       
       <div id="installContainer" class="hidden pt-1">
         <button id="installBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2 mx-auto">
@@ -45,11 +44,7 @@
         <label class="block text-sm font-medium mb-1 text-slate-300">נקודת מוצא <span class="text-xs text-slate-400">(אופציונלי - ברירת מחדל: מיקום נוכחי)</span></label>
         <div class="flex gap-2">
           <input type="text" id="origin" placeholder="השאר ריק למיקום נוכחי" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
-          <!-- כפתור עם אירועי העמדה/לחיצה להקלטה בלחיצה ממושכת -->
-          <button type="button" 
-                  onmousedown="startSpeech('origin')" onmouseup="stopSpeech()" 
-                  onttouchstart="startSpeech('origin')" ontouchend="stopSpeech()"
-                  id="mic-origin" class="mic-btn bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center select-none cursor-pointer">
+          <button type="button" onclick="toggleSpeech('origin')" id="mic-origin" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
             <i class="fa-solid fa-microphone"></i>
           </button>
         </div>
@@ -60,10 +55,7 @@
         <label class="block text-sm font-medium mb-1 text-slate-300">יעד</label>
         <div class="flex gap-2">
           <input type="text" id="destination" placeholder="למשל: חיפה, מרכז הכרמל" class="flex-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-white">
-          <button type="button" 
-                  onmousedown="startSpeech('destination')" onmouseup="stopSpeech()" 
-                  onttouchstart="startSpeech('destination')" ontouchend="stopSpeech()"
-                  id="mic-destination" class="mic-btn bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center select-none cursor-pointer">
+          <button type="button" onclick="toggleSpeech('destination')" id="mic-destination" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-emerald-400 px-4 rounded-xl transition-all flex items-center justify-center">
             <i class="fa-solid fa-microphone"></i>
           </button>
         </div>
@@ -141,8 +133,7 @@
     let driveApp = 'waze';
     let deferredPrompt;
     let recognition = null;
-    let currentInputEl = null;
-    let currentMicBtn = null;
+    let activeFieldId = null;
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -376,8 +367,8 @@ ${item.mapUrl}`;
       }
     }
 
-    // התחלת הקלטה בלחיצה
-    function startSpeech(fieldId) {
+    // ניהול הקלטה בלחיצה (התחל / עצור) המותאם בצורה מושלמת לטלפונים ניידים
+    function toggleSpeech(fieldId) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
       if (!SpeechRecognition) {
@@ -385,57 +376,57 @@ ${item.mapUrl}`;
         return;
       }
 
-      // מניעת הפעלה כפולה אם כבר מקליט
-      if (recognition) return;
+      // אם כבר יש הקלטה פעילה, נעצור אותה
+      if (recognition) {
+        recognition.stop();
+        return;
+      }
 
-      currentInputEl = document.getElementById(fieldId);
-      currentMicBtn = document.getElementById(`mic-${fieldId}`);
+      activeFieldId = fieldId;
+      const inputEl = document.getElementById(fieldId);
+      const micBtn = document.getElementById(`mic-${fieldId}`);
 
       recognition = new SpeechRecognition();
       recognition.lang = 'he-IL';
-      recognition.interimResults = true; // מציג תוצאה תוך כדי דיבור
+      recognition.interimResults = true;
 
-      currentMicBtn.classList.add('text-rose-500', 'animate-pulse');
+      micBtn.classList.add('text-rose-500', 'animate-pulse');
+      inputEl.placeholder = 'מקליט... דבר אל המיקרופון';
 
       recognition.onresult = function(event) {
         let transcript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           transcript += event.results[i][0].transcript;
         }
-        currentInputEl.value = transcript;
+        inputEl.value = transcript;
       };
 
       recognition.onerror = function(event) {
         console.log('שגיאת זיהוי קולי:', event.error);
+        stopMicUI();
       };
 
       recognition.onend = function() {
-        if (currentMicBtn) {
-          currentMicBtn.classList.remove('text-rose-500', 'animate-pulse');
-        }
-        recognition = null;
+        stopMicUI();
       };
 
       try {
         recognition.start();
       } catch (e) {
         console.log(e);
+        stopMicUI();
       }
     }
 
-    // עצירת הקלטה בעזיבת הלחיצה
-    function stopSpeech() {
-      if (recognition) {
-        // השהייה קצרה של חצי שנייה (500 מילישניות) לפני סגירה מוחלטת כפי שביקשת
-        setTimeout(() => {
-          if (recognition) {
-            recognition.stop();
-          }
-          if (currentMicBtn) {
-            currentMicBtn.classList.remove('text-rose-500', 'animate-pulse');
-          }
-        }, 500);
+    function stopMicUI() {
+      if (activeFieldId) {
+        const inputEl = document.getElementById(activeFieldId);
+        const micBtn = document.getElementById(`mic-${activeFieldId}`);
+        if (micBtn) micBtn.classList.remove('text-rose-500', 'animate-pulse');
+        if (inputEl) inputEl.placeholder = (activeFieldId === 'origin') ? 'השאר ריק למיקום נוכחי' : 'למשל: חיפה, מרכז הכרמל';
       }
+      recognition = null;
+      activeFieldId = null;
     }
   </script>
 </body>
